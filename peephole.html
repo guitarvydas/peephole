@@ -32,16 +32,16 @@ END
 </textarea>
 
 
-<p>output:</p>
+<p>generated javascript:</p>
+<textarea id="transpiled" rows="12" cols="90" placeholder="transpiled"  readonly style="background-color:whitesmoke;">
+</textarea>
+<p>optimized javascript:</p>
 <textarea id="output" rows="15" cols="90" placeholder="transpiled"  readonly style="background-color:whitesmoke;">
 </textarea>
 <br>
 <br>
 <p>for debugging keywords:</p>
 <textarea id="keywords" rows="3" cols="90" placeholder="transpiled"  readonly style="background-color:whitesmoke;">
-</textarea>
-<p>for debugging transpiled:</p>
-<textarea id="transpiled" rows="3" cols="90" placeholder="transpiled"  readonly style="background-color:whitesmoke;">
 </textarea>
 <br>
 <br>
@@ -190,7 +190,7 @@ identRest [c] = [[~{c}]]
 NonemptyListOf [x @xs @cs] = [[~{x}~{xs}~{cs}]]
 `;
 
-const peepholegrammar = String.raw`
+const peepholearraygrammar = String.raw`
 NLPeepholer {
 top = peephole+
 peephole =
@@ -203,7 +203,7 @@ Arg =
 }
 `;
 
-const peepholefmt = String.raw`
+const peepholearrayfmt = String.raw`
 top [@peephole] = [[~{peephole}]]
 peephole [x] = [[~{x}]]
 AtFunctionCall [kdot kat klp @Args krp] = [[\[~{Args}\] ]]
@@ -211,6 +211,27 @@ Arg_nested [klp @Args krp] = [[~{klp}~{Args}~{krp}]]
 Arg_basic [c] = [[~{c}]]
 `;
 
+const peepholeconstantsgrammar = String.raw`
+NLPeepholer {
+top = peephole+
+peephole =
+  | applySyntactic<AtFunctionCall>
+  | any
+AtFunctionCall = "." "at" "(" Arg* ")"
+Arg = 
+  | "(" Arg* ")"  -- nested
+  | ~"(" ~")" any -- basic
+}
+`;
+
+const peepholeconstantsfmt = String.raw`
+top [@peephole] = [[k:\n~{peephole}\nk]]
+peephole [x] = [[~{x}]]
+AtFunctionCall [kdot kat klp @Args krp] = [[\[~{Args}\] ]]
+Arg_nested [klp @Args krp] = [[~{klp}~{Args}~{krp}]]
+Arg_basic [c] = [[~{c}]]
+`;
+  
 
 
 
@@ -241,10 +262,16 @@ Arg_basic [c] = [[~{c}]]
           document.getElementById('transpiled').innerHTML = transpiled;
           if (success) {
               document.getElementById('status').innerHTML = "transpile OK " + Date ();
-              let [successpeep, peephole] = transpile1 (transpiled, peepholegrammar, peepholefmt, "peephole step");
-              if (successpeep) {
+              let [successarraypeep, arraypeephole] = transpile1 (transpiled, peepholearraygrammar, peepholearrayfmt, "peephole array step");
+              if (successarraypeep) {
                   document.getElementById('status').innerHTML = "OK " + Date ();
-                  document.getElementById('output').innerHTML = peephole;
+                  document.getElementById('output').innerHTML = arraypeephole;
+		  document.getElementById('status').innerHTML = "transpile OK " + Date ();
+		  let [successconstantspeep, constantspeephole] = transpile1 (transpiled, peepholeconstantsgrammar, peepholeconstantsfmt, "peephole constants step");
+		  if (successconstantspeep) {
+                      document.getElementById('status').innerHTML = "OK " + Date ();
+                      document.getElementById('output').innerHTML = constantspeephole;
+		  }
               }
           }
       }
