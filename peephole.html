@@ -43,6 +43,9 @@ END
 <p>for debugging keywords:</p>
 <textarea id="keywords" rows="3" cols="90" placeholder="transpiled"  readonly style="background-color:whitesmoke;">
 </textarea>
+<p>array optimized javascript:</p>
+<textarea id="arrayoutput" rows="15" cols="90" placeholder="transpiled"  readonly style="background-color:whitesmoke;">
+</textarea>
 <br>
 <br>
 <!-- Ohm-JS -->
@@ -191,7 +194,7 @@ NonemptyListOf [x @xs @cs] = [[~{x}~{xs}~{cs}]]
 `;
 
 const peepholearraygrammar = String.raw`
-NLPeepholer {
+NLArrayPeepholer {
 top = peephole+
 peephole =
   | applySyntactic<AtFunctionCall>
@@ -212,35 +215,32 @@ Arg_basic [c] = [[~{c}]]
 `;
 
 const peepholeconstantsgrammar = String.raw`
-NLPeepholer {
+NLConstantsPeepholer {
 top = peephole+
 peephole =
-  | applySyntactic<AtFunctionCall>
+  | applySyntactic<KplusK>
   | any
-AtFunctionCall = "." "at" "(" Arg* ")"
-Arg = 
-  | "(" Arg* ")"  -- nested
-  | ~"(" ~")" any -- basic
+KplusK = Constant "+" Constant
+Constant = digit+
 }
 `;
 
 const peepholeconstantsfmt = String.raw`
 top [@peephole] = [[k:\n~{peephole}\nk]]
 peephole [x] = [[~{x}]]
-AtFunctionCall [kdot kat klp @Args krp] = [[\[~{Args}\] ]]
-Arg_nested [klp @Args krp] = [[~{klp}~{Args}~{krp}]]
-Arg_basic [c] = [[~{c}]]
+KplusK [k1 addop k2] = [[~{k1}~{addop}~{k2}]]
+Constant [@k] = [[~{k}]]
 `;
   
 
 
 
-  function transpile1 (src, grammar, fmt, message) {
+  function transpile1 (src, grammar, grammarname, fmt, message) {
       var success = false;
       var transpiled = '';
       var jssemantics = '';
       try {
-          [success, transpiled, jssemantics] = expand1 (src, grammar, fmt, fixup);
+          [success, transpiled, jssemantics] = expand1 (src, grammar, fmt, fixup, grammarname);
       } catch (err) {
           success = false;
       }
@@ -254,28 +254,29 @@ Arg_basic [c] = [[~{c}]]
 
   function transpile () {
       let src = document.getElementById('src').value;
-      let [successkw, keywords] = transpile1 (src, tokengrammar, tokenfmt, "keyword step");
+      let [successkw, keywords] = transpile1 (src, tokengrammar, "Keywords", tokenfmt, "keyword step");
       document.getElementById('keywords').innerHTML = keywords;
       if (successkw) {
           document.getElementById('status').innerHTML = "keywords OK " + Date ();
-          let [success, transpiled] = transpile1 (keywords, nl2jsgrammar, nl2jsfmt, "transpilation step");
+          let [success, transpiled] = transpile1 (keywords, nl2jsgrammar, "NLLang", nl2jsfmt, "transpilation step");
           document.getElementById('transpiled').innerHTML = transpiled;
           if (success) {
               document.getElementById('status').innerHTML = "transpile OK " + Date ();
-              let [successarraypeep, arraypeephole] = transpile1 (transpiled, peepholearraygrammar, peepholearrayfmt, "peephole array step");
+              let [successarraypeep, arraypeephole] = transpile1 (transpiled, peepholearraygrammar, "NLArrayPeepholer",
+								  peepholearrayfmt, "peephole array step");
               if (successarraypeep) {
-                  document.getElementById('status').innerHTML = "OK " + Date ();
-                  document.getElementById('output').innerHTML = arraypeephole;
+                  document.getElementById('arrayoutput').innerHTML = arraypeephole;
 		  document.getElementById('status').innerHTML = "transpile OK " + Date ();
-		  let [successconstantspeep, constantspeephole] = transpile1 (transpiled, peepholeconstantsgrammar, peepholeconstantsfmt, "peephole constants step");
+		  let [successconstantspeep, constantspeephole] = transpile1 (arraypeephole, peepholeconstantsgrammar, "NLConstantsPeepholer", peepholeconstantsfmt, "peephole constants step");
+                  document.getElementById('output').innerHTML = constantspeephole;
 		  if (successconstantspeep) {
                       document.getElementById('status').innerHTML = "OK " + Date ();
-                      document.getElementById('output').innerHTML = constantspeephole;
 		  }
               }
           }
       }
   }
+
   </script>
 </body>
 </html>
