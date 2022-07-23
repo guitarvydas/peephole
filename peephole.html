@@ -226,9 +226,9 @@ Constant = digit+
 `;
 
 const peepholeconstantsfmt = String.raw`
-top [@peephole] = [[k:\n~{peephole}\nk]]
+top [@peephole] = [[konstants:\n~{peephole}\nkonstants]]
 peephole [x] = [[~{x}]]
-KplusK [k1 addop k2] = [[~{k1}~{addop}~{k2}]]
+KplusK [k1 addop k2] = [[~{eval(k1 + "+" + k2)}]]
 Constant [@k] = [[~{k}]]
 `;
   
